@@ -9,7 +9,7 @@ import os
 from numpy.core.numeric import cross
 
 
-def calc_perspective_image(image, rect, size):
+def calc_perspective_image(image, rect, uv):
     rect -= rect[0]
     src_rect =np.float32([[0, 0], [image.shape[1], 0], [0, image.shape[0]],
                         [image.shape[1], image.shape[0]]])
@@ -21,34 +21,29 @@ def calc_perspective_image(image, rect, size):
     translate[0, 2] = -_top_left[0]
     translate[1, 2] = -_top_left[1]
     transform = np.dot(translate, transform)
-    return cv2.warpPerspective(image, transform, size.astype(np.int32))
+    return cv2.warpPerspective(image, transform, uv.astype(np.int32))
 
 
-def add_sticker(img_source, img_sticker, x, y, size, alpha=None):
-    img_sticker = cv2.resize(img_sticker, size)
+def blend_sticker(img_source, img_sticker, x, y, uv, alpha=1):
+    x_si = max(0, x)
+    x_ei = min(img_source.shape[1], x+uv[0])
+    y_si = max(0, y)
+    y_ei = min(img_source.shape[0], y+uv[1])
 
-    xs = max(0, x)
-    xe = min(img_source.shape[1], x+size[0])
-    ys = max(0, y)
-    ye = min(img_source.shape[0], y+size[1])
+    y_e = y_ei-y-uv[1] if y_ei < y+uv[1] else None
+    x_e = x_ei-x-uv[0] if x_ei < x+uv[0] else None
 
-    ye_m = ye-y-size[1] if ye < y+size[1] else None
-    xe_m = xe-x-size[0] if xe < x+size[0] else None
-
-    alpha_mask = img_sticker[ys-y:ye_m, xs-x:xe_m, -1]
+    alpha_mask = img_sticker[y_si-y:y_e, x_si-x:x_e, -1]/255
     alpha_mask = alpha_mask.reshape(alpha_mask.shape + (1,))
-    img_sticker = img_sticker[ys-y:ye_m, xs-x:xe_m, :-1]
+    img_sticker = img_sticker[y_si-y:y_e, x_si-x:x_e, :-1]
 
-    sticker_area = img_source[ys:ye, xs:xe]
-    if alpha is not None:
-        img_sticker = cv2.addWeighted(sticker_area, 1-alpha, img_sticker, alpha, 0)
-
-    img_source[ys:ye, xs:xe] = np.where(alpha_mask==0,sticker_area,img_sticker).astype(np.uint8)
+    sticker_area = img_source[y_si:y_ei, x_si:x_ei]
+    img_source[y_si:y_ei, x_si:x_ei] = sticker_area*(1-alpha_mask*alpha) + img_sticker*alpha_mask*alpha
 
 
 #######################################################################
 
-my_image_path = r'C:\Users\kwansu\Desktop\AIFFEL_LMS\E_03_CameraSticker\data\face6.png'
+my_image_path = r'C:\Users\kwansu\Desktop\AIFFEL_LMS\E_03_CameraSticker\data\face5.png'
 img_bgr = cv2.imread(my_image_path) 
 
 detector_hog = dlib.get_frontal_face_detector()
@@ -73,9 +68,9 @@ print(f"인식한 랜드마크 개수 : {len(list_landmarks[0])}")
 
 
 
-# for landmark in list_landmarks:
-#     for idx, point in enumerate(list_points):
-#         cv2.circle(img_bgr, point, 2, (0, 255, 255), -1) # yellow
+
+# for idx, point in enumerate(list_points):
+#     cv2.circle(img_bgr, point, 2, (0, 255, 255), -1) # yellow
 
 # img_show_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
@@ -98,10 +93,10 @@ left_rect[2] = landmarks[3]
 left_rect[3] = landmarks[51]
 
 top_left = np.min(left_rect, axis=0).astype(np.int32)
-size = np.max(left_rect, axis=0).astype(np.int32) - top_left
+uv = np.max(left_rect, axis=0).astype(np.int32) - top_left
 
-img_cat_left = calc_perspective_image(img_cat_left, left_rect, size)
-add_sticker(img_bgr, img_cat_left, int(top_left[0]), int(top_left[1]), size, alpha=0.6)
+img_cat_left = calc_perspective_image(img_cat_left, left_rect, uv)
+blend_sticker(img_bgr, img_cat_left, int(top_left[0]), int(top_left[1]), uv, alpha=0.6)
 
 
 right_rect = np.zeros([4,2], dtype=np.float32)
@@ -111,10 +106,10 @@ right_rect[2] = landmarks[51]
 right_rect[3] = landmarks[13]
 
 top_left = np.min(right_rect, axis=0).astype(np.int32)
-size = np.max(right_rect, axis=0).astype(np.int32) - top_left
+uv = np.max(right_rect, axis=0).astype(np.int32) - top_left
 
-img_cat_right = calc_perspective_image(img_cat_right, right_rect, size)
-add_sticker(img_bgr, img_cat_right, top_left[0], top_left[1], size, alpha=0.6)
+img_cat_right = calc_perspective_image(img_cat_right, right_rect, uv)
+blend_sticker(img_bgr, img_cat_right, top_left[0], top_left[1], uv, alpha=0.6)
 
 
 sticker_path = r'C:\Users\kwansu\Desktop\AIFFEL_LMS\E_03_CameraSticker\data\king.png'
@@ -140,10 +135,10 @@ crown_rect[3] = ori + cross_v/2
 crown_rect[0] = crown_rect[2] + cross_h
 crown_rect[1] = crown_rect[3] + cross_h
 top_left = np.min(crown_rect, axis=0).astype(np.int32)
-size = np.max(crown_rect, axis=0).astype(np.int32) - top_left
+uv = np.max(crown_rect, axis=0).astype(np.int32) - top_left
 
-img_crown = calc_perspective_image(img_crown, crown_rect, size)
-add_sticker(img_bgr, img_crown, top_left[0], top_left[1], size, alpha=0.6)
+img_crown = calc_perspective_image(img_crown, crown_rect, uv)
+blend_sticker(img_bgr, img_crown, top_left[0], top_left[1], uv, alpha=0.6)
 
 plt.imshow(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
 plt.show()
