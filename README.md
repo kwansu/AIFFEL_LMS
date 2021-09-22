@@ -15,3 +15,7 @@
 | 13 | [CIFAR-10 이미지 생성하기](E13_MakeCIFAR-10Image/%5BE-13%5DMakeCIFAR-10Image.ipynb) |
 | 14 | [주식 예측에 도전해 보자](E14_StockPricePrediction/%5BE14%5DStockPricePrediction.ipynb) |
 | 15 | [한국어 데이터로 챗봇 만들기](E15_Transformer_KereanChatbot/%5BE-15%5DMakeKoreanChatbot.ipynb) |
+| 16 | [흐린 사진을 선명하게](E16_SuperResolutionGAN/%5BE-16%5DSuperResolutionGAN.ipynb) |
+| 17 | [BERT를 활용한 KorQuAD](E17_KorQuAD-BERT/%5BE-17%5DKorQuAD_BERT.ipynb) |
+| 18 | [문자를 읽을 수 있는 딥러닝](E18_OpticalCharacterRecognition/%5BE-18%5DOCR.ipynb) |
+| 19 | [pix2pix 도로 이미지 만들기](E19_SegmentationMap/%5BE-19%5DPix2Pix.ipynb) |
